@@ -33,17 +33,57 @@ const submitQuery = asyncHandler(async (req, res) => {
 });
 
 const getAllQueries = asyncHandler(async (req, res) => {
-  const allQueries = await Contact.find({}).select(
-    "-__v -updatedAt -createdAt"
-  );
+  const { offset = 0, limit = 8, range = "7 days" } = req.query;
 
-  if (!allQueries)
+  // Calculate the date range filter
+  let dateFilter = {};
+  const currentDate = new Date();
+  switch (range) {
+    case "7 days":
+      dateFilter = {
+        createdAt: {
+          $gte: new Date(currentDate.setDate(currentDate.getDate() - 7)),
+        },
+      };
+      break;
+    case "30 days":
+      dateFilter = {
+        createdAt: {
+          $gte: new Date(currentDate.setMonth(currentDate.getMonth() - 1)),
+        },
+      };
+      break;
+    case "90 days":
+      dateFilter = {
+        createdAt: {
+          $gte: new Date(currentDate.setMonth(currentDate.getMonth() - 3)),
+        },
+      };
+      break;
+    // Add more ranges as needed
+    default:
+      dateFilter = {};
+  }
+
+  const allQueries = await Contact.find(dateFilter)
+    .select("-__v -updatedAt -createdAt")
+    .skip(parseInt(offset))
+    .limit(parseInt(limit));
+
+  if (!allQueries) {
     throw new ApiError(400, "Something went wrong while fetching the queries.");
+  }
+
+  const totalItems = await Contact.countDocuments(dateFilter);
 
   return res
     .status(200)
     .json(
-      new ApiResponse(200, allQueries, "All queries fetched successfully.")
+      new ApiResponse(
+        200,
+        { queries: allQueries, totalItems },
+        "All queries fetched successfully."
+      )
     );
 });
 
