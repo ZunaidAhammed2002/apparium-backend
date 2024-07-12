@@ -65,8 +65,16 @@ const getAllQueries = asyncHandler(async (req, res) => {
       dateFilter = {};
   }
 
+  // Fetch the total count of unseen items
+  const totalUnseenItems = await Contact.countDocuments({
+    ...dateFilter,
+    isSeen: false,
+  });
+
+  // Fetch the queries with sorting and pagination
   const allQueries = await Contact.find(dateFilter)
     .select("-__v -updatedAt -createdAt")
+    .sort({ createdAt: -1 }) // Sort by createdAt in descending order
     .skip(parseInt(offset))
     .limit(parseInt(limit));
 
@@ -74,17 +82,15 @@ const getAllQueries = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Something went wrong while fetching the queries.");
   }
 
-  const totalUnseenItems = await Contact.countDocuments({
-    ...dateFilter,
-    isSeen: false,
-  });
+  // Fetch the total count of items
+  const totalItems = await Contact.countDocuments(dateFilter);
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { queries: allQueries, totalUnseenItems },
+        { queries: allQueries, totalItems, totalUnseenItems },
         "All queries fetched successfully."
       )
     );
