@@ -74,14 +74,17 @@ const getAllQueries = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Something went wrong while fetching the queries.");
   }
 
-  const totalItems = await Contact.countDocuments(dateFilter);
+  const totalUnseenItems = await Contact.countDocuments({
+    ...dateFilter,
+    isSeen: false,
+  });
 
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        { queries: allQueries, totalItems },
+        { queries: allQueries, totalUnseenItems },
         "All queries fetched successfully."
       )
     );
